@@ -2,14 +2,16 @@ import webbrowser
 import time
 import os
 import platform
-import tkinter as tk
-from tkinter import font as tkfont
-from tkinter import PhotoImage, ttk
+import threading
+import customtkinter as ctk
 import subprocess
 import win32com.client
 import win32gui
 import win32con
-import threading
+
+# Set appearance mode and default color theme for customtkinter
+ctk.set_appearance_mode("dark")  # Options: "dark", "light", "system"
+ctk.set_default_color_theme("blue")  # Options: "blue", "green", "dark-blue"
 
 # Global variables for tracking progress
 TOTAL_TASKS = 0
@@ -53,11 +55,11 @@ def update_progress(step_text, task_name=None, is_completed=False):
     if PROGRESS_WINDOW and PROGRESS_WINDOW.winfo_exists():
         try:
             progress_value = calculate_progress()
-            PROGRESS_BAR["value"] = progress_value
-            PROGRESS_LABEL.config(text=f"{progress_value}% Complete")
-            STATUS_LABEL.config(text=step_text)
+            PROGRESS_BAR.set(progress_value / 100)  # customtkinter uses 0.0-1.0 range
+            PROGRESS_LABEL.configure(text=f"{progress_value}% Complete")
+            STATUS_LABEL.configure(text=step_text)
             PROGRESS_WINDOW.update()
-        except tk.TclError:
+        except Exception:
             # Window might have been closed
             pass
 
@@ -307,12 +309,13 @@ def open_word_documents(file_paths):
 
 def create_progress_ui():
     """
-    Creates a sleek, modern progress bar UI
+    Creates a sleek, modern progress bar UI using customtkinter
     """
     global PROGRESS_WINDOW, PROGRESS_BAR, PROGRESS_LABEL, STATUS_LABEL
     
     # Create the main window
-    root = tk.Tk()
+    ctk.set_appearance_mode("dark")  # Set dark mode
+    root = ctk.CTk()
     root.title("Workspace Startup")
     PROGRESS_WINDOW = root
     
@@ -325,65 +328,50 @@ def create_progress_ui():
     y_position = (screen_height - window_height) // 2
     root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
     
-    # Set window properties
-    root.configure(bg="#1a1a2e")  # Very dark blue background
-    root.overrideredirect(True)  # Remove window borders
+    # Remove window borders (CustomTkinter already has a modern look)
+    root.overrideredirect(True)
     
     # Make window appear on top
     root.attributes('-topmost', True)
     
-    # Add subtle shadow effect with an outer frame
-    outer_frame = tk.Frame(root, bg="#16213e", bd=0)  # Dark blue outer frame
-    outer_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER, relwidth=0.98, relheight=0.96)
-    
-    # Create a frame with subtle gradient effect
-    frame = tk.Frame(outer_frame, bg="#0f3460", bd=0)  # Dark blue/purple inner frame
-    frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER, relwidth=0.97, relheight=0.95)
-    
-    # Add an accent line at the top
-    accent_line = tk.Frame(frame, bg="#e94560", height=3)  # Neon accent color
-    accent_line.place(relx=0.5, rely=0.05, anchor=tk.CENTER, relwidth=0.9)
+    # Create a main frame
+    main_frame = ctk.CTkFrame(root)
+    main_frame.pack(fill="both", expand=True, padx=10, pady=10)
     
     # Add greeting text
-    title_font = tkfont.Font(family="Segoe UI", size=18, weight="bold")
-    greeting_label = tk.Label(frame, text="Workspace Initialization", 
-                            font=title_font, bg="#0f3460", fg="#ffffff")
+    greeting_label = ctk.CTkLabel(
+        main_frame, 
+        text="Workspace Initialization", 
+        font=ctk.CTkFont(family="Segoe UI", size=22, weight="bold")
+    )
     greeting_label.pack(pady=(40, 20))
     
-    # Add progress bar
-    style = ttk.Style()
-    style.theme_use('default')
-    style.configure("Custom.Horizontal.TProgressbar", 
-                    thickness=12, 
-                    troughcolor="#283747",
-                    background="#e94560",
-                    troughrelief=tk.FLAT)
-    
-    PROGRESS_BAR = ttk.Progressbar(frame, style="Custom.Horizontal.TProgressbar", 
-                                    length=400, mode="determinate")
-    PROGRESS_BAR.pack(pady=10)
+    # Add progress bar (progress_bar in customtkinter uses 0-1 range)
+    PROGRESS_BAR = ctk.CTkProgressBar(
+        main_frame,
+        width=400,
+        height=10,
+        corner_radius=5
+    )
+    PROGRESS_BAR.set(0)  # Set initial value to 0
+    PROGRESS_BAR.pack(pady=15)
     
     # Add percentage label
-    percentage_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
-    PROGRESS_LABEL = tk.Label(frame, text="0% Complete", 
-                            font=percentage_font, bg="#0f3460", fg="#e2e2e2")
+    PROGRESS_LABEL = ctk.CTkLabel(
+        main_frame,
+        text="0% Complete",
+        font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold")
+    )
     PROGRESS_LABEL.pack(pady=5)
     
     # Add status message
-    status_font = tkfont.Font(family="Segoe UI", size=9)
-    STATUS_LABEL = tk.Label(frame, text="Initializing...", font=status_font,
-                          bg="#0f3460", fg="#8d99ae", wraplength=500)
-    STATUS_LABEL.pack(pady=10)
-    
-    # Create a thin border for the window
-    edge_top = tk.Frame(root, bg="#e94560", height=1)
-    edge_top.place(x=0, y=0, relwidth=1)
-    edge_left = tk.Frame(root, bg="#e94560", width=1)
-    edge_left.place(x=0, y=0, relheight=1)
-    edge_right = tk.Frame(root, bg="#e94560", width=1)
-    edge_right.place(relx=1, y=0, relheight=1, anchor='ne')
-    edge_bottom = tk.Frame(root, bg="#e94560", height=1)
-    edge_bottom.place(relx=0, rely=1, relwidth=1, anchor='sw')
+    STATUS_LABEL = ctk.CTkLabel(
+        main_frame,
+        text="Initializing...",
+        font=ctk.CTkFont(family="Segoe UI", size=12),
+        wraplength=500
+    )
+    STATUS_LABEL.pack(pady=15)
     
     # Add fade-in effect when showing
     root.attributes('-alpha', 0.0)
@@ -408,17 +396,10 @@ def complete_progress_ui():
     update_progress("Finalizing workspace setup...", "ui_completion", True)
     
     # Now update to 100% - this happens only at the very end
-    PROGRESS_BAR["value"] = 100
-    PROGRESS_LABEL.config(text="100% Complete")
-    STATUS_LABEL.config(text="Workspace ready. Welcome Amir!")
+    PROGRESS_BAR.set(1.0)  # customtkinter uses 0.0-1.0 range
+    PROGRESS_LABEL.configure(text="100% Complete")
+    STATUS_LABEL.configure(text="Workspace ready. Welcome Amir!")
     
-    # Add a close button with hover effect
-    def on_enter(e):
-        close_button['background'] = "#e94560"  # Brighter on hover
-        
-    def on_leave(e):
-        close_button['background'] = "#e5383b"  # Return to original color
-        
     def close_window():
         # Add fade-out effect
         for i in range(10, 0, -1):
@@ -427,19 +408,20 @@ def complete_progress_ui():
             time.sleep(0.02)
         PROGRESS_WINDOW.destroy()
     
-    button_frame = tk.Frame(PROGRESS_WINDOW, bg="#0f3460")
-    button_frame.place(relx=0.5, rely=0.85, anchor=tk.CENTER)
-    
-    close_button = tk.Button(button_frame, text="Begin", command=close_window,
-                           bg="#e5383b", fg="white", font=("Segoe UI", 10, "bold"),
-                           relief=tk.FLAT, padx=20, pady=8,
-                           activebackground="#ba181b", activeforeground="white",
-                           cursor="hand2")  # Hand cursor on hover
-    close_button.pack()
-    
-    # Add hover effects to button
-    close_button.bind("<Enter>", on_enter)
-    close_button.bind("<Leave>", on_leave)
+    # Add a close button
+    close_button = ctk.CTkButton(
+        PROGRESS_WINDOW,
+        text="Begin",
+        command=close_window,
+        font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+        corner_radius=8,
+        height=38,
+        width=120,
+        hover=True,
+        fg_color="#e94560",  # Custom button color
+        hover_color="#ba181b"  # Darker on hover
+    )
+    close_button.place(relx=0.5, rely=0.85, anchor="center")
     
     # Auto-close after 15 seconds
     PROGRESS_WINDOW.after(15000, close_window)
@@ -450,12 +432,12 @@ def startup_sequence():
     """
     # List of URLs to open
     links = [
-        "https://yourneededlinks"
+        "enter website link",
     ]
    
     # List of Word documents
     word_documents = [
-        r"YourDrive:\Filepath"
+        r"link:\to\yourfile",
     ]
     
     # Register tasks and their weights (total should equal 100)
